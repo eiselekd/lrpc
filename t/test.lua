@@ -17,7 +17,8 @@ print(inspect(a));
 --lrpc.pprint(lrpc);
 
 SimpleClass = {}
-SimpleClass_mt = { __index = SimpleClass }
+SimpleClass_mt = { __index = SimpleClass
+};
 function SimpleClass:create()
    local new_inst = {}    -- the new instance
    setmetatable( new_inst, SimpleClass_mt ) -- all instances share the same metatable
@@ -47,14 +48,12 @@ tgtroot = {
 tgt = lrpc.tgtlocal(tgtroot);
 tgtwrap = lrpc.tgtproxy(tgt,true);
 
-print(tgtwrap.getnum());
-print(tgtwrap.gettab());
+--print(tgtwrap.getnum());
+--print(tgtwrap.gettab());
 --print(tgtwrap.getstr());
 --print(tgtwrap.getnil());
 
---tgtwrap.getobj().c();
-
-
+tgtwrap.getobj().c();
 
 --  Local Variables:
 --  c-basic-offset:4

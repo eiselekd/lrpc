@@ -323,8 +323,8 @@ function lrpc.lrpc_server_one(self,c)
    al = c:sub(#o + 2)
    local o = tonumber(o)
    --lrpc.pprint(self.objs);
-   print(self);
-   print(o);
+   --print(self);
+   --print(o);
    o = self.objs[o]
    --print(o);
 
@@ -334,8 +334,8 @@ function lrpc.lrpc_server_one(self,c)
    if d == "c" then
       r = table.pack(o(table.unpack(args, 1, args.n)))
    elseif d == "[" then
-      print(args[1]);
-      print(o);
+      --print(args[1]);
+      --print(o);
       r[1] = o[args[1]]
       r.n = 1
    elseif d == "=" then
@@ -356,7 +356,7 @@ function lrpc.lrpc_server(self)
    repeat
       local s,c = pcall(recvcmd);
       if (s and c) then
-         lrpc.debug("[>] %p" % {c})
+         --lrpc.debug("[>] %p" % {c})
          r = lrpc.lrpc_server_one(self,c);
          r = ser(table.unpack(r, 1, r.n));
          lrpc.send(r)
@@ -386,7 +386,7 @@ function lrpc.tgtproxy(conn,testmode)
       function m.send(c)
          lrpc.debug("[>] %p" % {c})
          local r = conn.lrpc_server_one(conn,c)
-         lrpc.pprint(r);
+         --lrpc.pprint(r);
          ret = lrpc.ser(conn,table.unpack(r, 1, r.n))
          return r;
       end
