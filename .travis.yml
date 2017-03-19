@@ -8,21 +8,18 @@ env:
         - LUAROCKS=2.3.0
     matrix:
         - LUA_VERSION="5.2"
-    
+
 before_install:
     - pip install hererocks
-    - hererocks env -r $LUAROCKS --lua $LUA_VERSION 
+    - hererocks env -r $LUAROCKS --lua $LUA_VERSION
     - source env/bin/activate
     - luarocks install busted
 
 script:
     - luarocks make rockspecs/lrpc/lrpc-0.0.1-1.rockspec
-    - ( cd luasocket; luarocks make rockspec/luasocket-3.0rc2-1.rockspec )
-    - ( cd luaevent; luarocks make rockspecs/luaevent/luaevent-0.4.4-1.rockspec )
     - lua t/test.lua
 
 notifications:
     email:
         on_success: change
         on_failure: always
-
