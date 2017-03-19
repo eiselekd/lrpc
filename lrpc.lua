@@ -2,7 +2,7 @@ local lrpc = require"lrpc.core";
 
 local isserv = 1
 
---- pack an argument list into a table.
+--- pack an  argument list into a table.
 if not table.pack then
    function table.pack (...)
       return {n=select('#',...); ...}
