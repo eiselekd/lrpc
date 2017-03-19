@@ -3,6 +3,7 @@ LUA_CFLAGS=$(shell pkg-config lua$(LUA_VERSION) --cflags)
 LUA_LDFLAGS=$(shell pkg-config lua$(LUA_VERSION) --libs)
 
 lrpc/core.so: lrpc.c
+	mkdir -p lrpc
 	gcc $(LUA_CFLAGS) -O2 -fpic -c -o lrpc.o lrpc.c
 	gcc $(LUA_LDFLAGS) -O -shared -fpic -o lrpc/core.so lrpc.o
 
