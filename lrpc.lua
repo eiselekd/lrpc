@@ -54,7 +54,7 @@ function lrpc.pprint_(o,ind,vis)
          return "false"
       end
    elseif typ == "number" then
-      return string.format("%d (0x%x)",o, o);
+      return string.format("%d (0x%x)", o, o);
    elseif typ == "string" then
       return string.format("%q",o)
    elseif typ == "function" then
@@ -105,8 +105,9 @@ function lrpc.pprint_(o,ind,vis)
       table.insert(r, "}")
       return table.concat(r)
    else
-      error("Unsupported type %s" % typ)
+      --error("Unsupported type ".. typ)
    end
+   return ""
 end
 
 function lrpc.pprint2str(...)
@@ -161,16 +162,19 @@ function lrpc.ser(self,...)
          table.insert(r,m.getid(a));
       else
          local id
-         self.objs[2] = 1;
          local o = self.objs;
          if not self.objs[a] == nil then
             self.objs[a][2] = self.objs[a][2] + 1 ;
-            id = self.objs[1]
+            id = self.objs[a][1]
          else
             id = self.nextid;
             self.nextid = self.nextid + 1
             self.objs[a] = { id, 1 };
             self.objs[id] = a;
+
+            --print (":"..id);
+            --print (a);
+
          end
          table.insert(r,"@");
          table.insert(r,id);
@@ -250,11 +254,11 @@ function lrpc.connect(conn)
    local m = getmetatable(o)
 
    m.ids = setmetatable({}, { __mode = "k" })
-   m.ids[o] = "0"
+   m.ids[o] = "2"
+   m.defer_cleanup = {};
 
-   function remote(self, c, ...)
+   function remote_send(self, l)
       local m = getmetatable(self)
-      local l = c .. m.getid(self) .. lrpc.ser(self,...)
       repeat
          conn.send(l)
          s,c = pcall(conn.recv)
@@ -264,6 +268,14 @@ function lrpc.connect(conn)
       until c
       local lm, r = lrpc.deser(self, c, 1, false)
       return table.unpack(r,1,r.n)
+   end
+
+   function remote(self, c, ...)
+      if #m.defer_cleanup > 0 then
+         remote_send(self, "~" .. table.concat(m.defer_cleanup, "#"))
+         meta.need_cleanup = {}
+      end
+      return remote_send(self, c .. m.getid(self) .. lrpc.ser(self,...));
    end
 
    m.getid = function (self, k)
@@ -288,15 +300,18 @@ function lrpc.connect(conn)
       return remote(self, "c", ...)
    end
    m.__gc = function (self,...)
+      local id = m.ids[self]
+      table.insert(m.defer_cleanup, id)
+      m.ids[self] = nil
    end
    m.__pairs = function (self,...)
-      local g = lrpc.new_obj(self, 0);
-      local p = remote(self, "[", "pairs");
+      local g = m.new(self, 0);
+      local p = remote(g, "[", "pairs");
       return remote(p, "c", self);
    end
    m.__ipairs = function (self,...)
-      local g = lrpc.new_obj(self, 0);
-      local p = remote(self, "[", "ipairs");
+      local g = m.new(self, 0);
+      local p = remote(g, "[", "ipairs");
       return remote(p, "c", self);
    end
    return o
@@ -307,13 +322,20 @@ function lrpc.lrpc_server_one(self,c)
    o = c:match("^%d+",2)
    al = c:sub(#o + 2)
    local o = tonumber(o)
+   --lrpc.pprint(self.objs);
+   print(self);
+   print(o);
    o = self.objs[o]
+   --print(o);
+
    local _, args = lrpc.deser(self,al,1,true)
    r = {}
    r.n = 0
    if d == "c" then
       r = table.pack(o(table.unpack(args, 1, args.n)))
    elseif d == "[" then
+      print(args[1]);
+      print(o);
       r[1] = o[args[1]]
       r.n = 1
    elseif d == "=" then
@@ -345,9 +367,12 @@ end
 function lrpc.tgtlocal(root)
    local o = {
       r = root,
-      nextid = 1,
+      nextid = 3,
       objs = { } };
-   o.objs[0] = root;
+   o.objs[0] = _ENV;
+   o.objs[_ENV] = {0, 1};
+   o.objs[2] = root;
+   o.objs[root] = {2, 1}
    return setmetatable(o, lrpc);
    --local o = lrpc.proxy(nil)
 end
