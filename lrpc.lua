@@ -9,11 +9,131 @@ if not table.pack then
    end
 end
 
-function lrpc.ser(...)
+--- python style % format
+getmetatable("").__mod = function(f, p)
+   local r = {};
+   local l = #f
+   if not p then
+      return format
+   end
+   if not type(p) == "table" then
+      p = table.pack(p)
+   end
+   local i = 0;
+   while i <= l do
+      local c = f:sub(i,i);
+      if c == '%' and i+1 <= l then
+         local o = f:sub(i,l):match("^%%%d*[dsp]")
+         --print("o:" .. o);
+         local d = o:sub(#o,#o)
+         i = i + #o - 1
+         local a = table.remove(p,1)
+         if d == 'd' or d == 's' then
+            table.insert(r, string.format(o,a));
+         elseif d == 'p' then
+            table.insert(r,lrpc.pprint2str(a));
+         else
+            table.insert(r,"<undef>");
+         end
+      else
+         table.insert(r, c);
+      end
+      i = i + 1;
+   end
+   return table.concat(r);
+end
+
+function lrpc.pprint_(o,ind,vis)
+   local typ = type(o)
+   if (typ == "nil") then
+      return "nil"
+   elseif (typ == "boolean") then
+      if o then
+         return "true"
+      else
+         return "false"
+      end
+   elseif typ == "number" then
+      return string.format("%d (0x%x)",o, o);
+   elseif typ == "string" then
+      return string.format("%q",o)
+   elseif typ == "function" then
+      return tostring(o)
+   elseif typ == "thread" then
+      return string.format("thread (%s)",o:status())
+   elseif typ == "table" then
+      local keys = {}
+      for k,_ in pairs(o) do
+         table.insert(keys, k)
+      end
+      local c = function(a,b)
+         local na = tonumber(a)
+         local nb = tonumber(b)
+         if na and nb then
+            return na < nb
+         else
+            return tostring(a) < tostring(b)
+         end
+      end
+      table.sort(keys, c);
+      vis[o] = 1
+      local ind_ = ind .. "  "
+      local r = {"{\n"}
+      for j=1,#keys do
+         local k = keys[j]
+         local v = o[k]
+         table.insert(r, ind_)
+         if (type(v) == "table") and vis[v] then
+            if type(k) == "number" then
+               table.insert(r, string.format("[%d] = {...}\n",k))
+            else
+               table.insert(r, tostring(key))
+               table.insert(r, " = {...}\n")
+            end
+         elseif type(k) == "number" then
+            table.insert(r, string.format("[%d] = ",k))
+            table.insert(r, lrpc.pprint_(v, ind_, vis))
+            table.insert(r, "\n")
+         else
+            table.insert(r, tostring(k))
+            table.insert(r, " = ")
+            table.insert(r, lrpc.pprint_(v, ind_, vis))
+            table.insert(r, "\n")
+         end
+      end
+      table.insert(r, ind)
+      table.insert(r, "}")
+      return table.concat(r)
+   else
+      error("Unsupported type %s" % typ)
+   end
+end
+
+function lrpc.pprint2str(...)
+   p = table.pack(...)
+   local v = {}
+   local r = {}
+   for i=1,p.n do
+      r[i] = lrpc.pprint_(p[i], "", v)
+   end
+   return (table.concat(r, " "))
+end
+
+function lrpc.pprint(...)
+   print(lrpc.pprint2str(...))
+end
+
+function lrpc.debug(...)
+   print(...)
+end
+
+function lrpc.ser(self,...)
    local r = {}
    local args = table.pack(...)
-   for i=1, args.n do
+   --lrpc.debug("[?] %p" % {args})
+   for i=1,args.n do
       local a = args[i]
+      --lrpc.debug("[=] %p" % {a})
       local typ = type(a);
       if (a == nil) then
          table.insert(r,"n")
@@ -31,8 +151,8 @@ function lrpc.ser(...)
       elseif typ == "table" then
          table.insert(r,"{");
          for k,v in pairs(a) do
-            table.insert(r,lrpc.ser(k))
-            table.insert(r,lrpc.ser(v))
+            table.insert(r,lrpc.ser(self,k))
+            table.insert(r,lrpc.ser(self,v))
          end
          table.insert(r,"}");
       elseif typ == "userdata" then
@@ -40,13 +160,29 @@ function lrpc.ser(...)
          table.insert(r,"@");
          table.insert(r,m.getid(a));
       else
-         error("Unsupported type");
+         local id
+         self.objs[2] = 1;
+         local o = self.objs;
+         if not self.objs[a] == nil then
+            self.objs[a][2] = self.objs[a][2] + 1 ;
+            id = self.objs[1]
+         else
+            id = self.nextid;
+            self.nextid = self.nextid + 1
+            self.objs[a] = { id, 1 };
+            self.objs[id] = a;
+         end
+         table.insert(r,"@");
+         table.insert(r,id);
       end
    end
    return table.concat(r);
 end
 
-function lrpc.deser(e,str,idx)
+
+
+
+function lrpc.deser(self, str, idx, isserv)
    local i = idx;
    local g;
    local l = #str;
@@ -72,13 +208,13 @@ function lrpc.deser(e,str,idx)
          local a,b = str:find("[0-9]+",i);
          v = tonumber(str:sub(i,b))
          if isserv then
-            v = lrpc.objs[v]
+            v = self.objs[v]
          else
-            v = getmetatable(e).new(r,v)
+            v = getmetatable(self).new(self,v)
          end
          i = b+1;
       elseif c == '{' then
-         i,g = lrpc.deser(e, str, i)
+         i,g = lrpc.deser(self, str, i, isserv)
          v = {}
          for j=1,#g,2 do
             v[g[j]] = g[j+1]
@@ -86,7 +222,7 @@ function lrpc.deser(e,str,idx)
       elseif c == '}' then
          break;
       elseif c == 'e' then
-         i,g = lrpc.deser(e, str, i)
+         i,g = lrpc.deser(self, str, i, isserv)
          error(g[1]);
       else
          error('Parse error in "' .. str .. '"')
@@ -113,9 +249,12 @@ function lrpc.connect(conn)
    local o = lrpc.proxy(nil)
    local m = getmetatable(o)
 
+   m.ids = setmetatable({}, { __mode = "k" })
+   m.ids[o] = "0"
+
    function remote(self, c, ...)
       local m = getmetatable(self)
-      local line = command .. m.getid(self) .. ser(...)
+      local l = c .. m.getid(self) .. lrpc.ser(self,...)
       repeat
          conn.send(l)
          s,c = pcall(conn.recv)
@@ -123,10 +262,19 @@ function lrpc.connect(conn)
             c = nil
          end
       until c
-      local lm, r = deser(self, 1, c, false)
+      local lm, r = lrpc.deser(self, c, 1, false)
       return table.unpack(r,1,r.n)
    end
 
+   m.getid = function (self, k)
+      local m = getmetatable(self)
+      return m.ids[self]
+   end
+   m.new = function (self, k)
+      local o = lrpc.proxy(self)
+      m.ids[o] = tostring(k)
+      return o
+   end
    m.__index = function (self, k)
       return remote(self, "[", k)
    end
@@ -154,37 +302,75 @@ function lrpc.connect(conn)
    return o
 end
 
-function lrpc.lrpc_server()
+function lrpc.lrpc_server_one(self,c)
+   d = c:sub(1,1)
+   o = c:match("^%d+",2)
+   al = c:sub(#o + 2)
+   local o = tonumber(o)
+   o = self.objs[o]
+   local _, args = lrpc.deser(self,al,1,true)
+   r = {}
+   r.n = 0
+   if d == "c" then
+      r = table.pack(o(table.unpack(args, 1, args.n)))
+   elseif d == "[" then
+      r[1] = o[args[1]]
+      r.n = 1
+   elseif d == "=" then
+      o[args[1]] = args[2]
+   elseif d == "#" then
+      r[1] = #o
+      r.n = 1
+   elseif d == "~" then
+
+   else
+      error ("Unknown command:" .. d .. ":" .. c);
+   end
+   return r
+end
+
+function lrpc.lrpc_server(self)
    local o, d, obj, al, e
    repeat
       local s,c = pcall(recvcmd);
       if (s and c) then
-         d = c.sub(1,1)
-         o = c.match("^%d+",2)
-         al = c.sub(#o + 2)
-         o = tonumber(o)
-         obj = objs[o]
-         local _, args = deser(e,1,al)
-         r = {}
-         r.n = 0
-         if c == "c" then
-            r = table.pack(o(table.unpack(args, 1, args.n)))
-         elseif c == "[" then
-            r[1] = o[args[1]]
-            r.n = 1
-         elseif c == "=" then
-            o[args[1]] = args[2]
-         elseif c == "#" then
-            r[1] = #o
-            r.n = 1
-         elseif c == "~" then
-
-         else
-            error ("Unknown command");
-         end
-         lrpc.send(ser(table.unpack(r, 1, r.n)))
+         lrpc.debug("[>] %p" % {c})
+         r = lrpc.lrpc_server_one(self,c);
+         r = ser(table.unpack(r, 1, r.n));
+         lrpc.send(r)
       end
    until false;
+end
+
+function lrpc.tgtlocal(root)
+   local o = {
+      r = root,
+      nextid = 1,
+      objs = { } };
+   o.objs[0] = root;
+   return setmetatable(o, lrpc);
+   --local o = lrpc.proxy(nil)
+end
+
+function lrpc.tgtproxy(conn,testmode)
+
+   if testmode then
+      -- in testmode conn is the target object and is called directly by overriding send and recv
+      local ret = "";
+      local m = getmetatable(conn);
+      function m.send(c)
+         lrpc.debug("[>] %p" % {c})
+         local r = conn.lrpc_server_one(conn,c)
+         lrpc.pprint(r);
+         ret = lrpc.ser(conn,table.unpack(r, 1, r.n))
+         return r;
+      end
+      function m.recv (...)
+         lrpc.debug("[<] %p" % {ret})
+         return ret;
+      end
+   end
+   return lrpc.connect(conn)
 end
 
 return lrpc

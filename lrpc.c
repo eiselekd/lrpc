@@ -20,7 +20,7 @@
 static const char *hex = "0123456789abcdef";
 #define MYNAME "lrpc"
 #define MYVERSION MYNAME " library for " LUA_VERSION
-#define MYTYPE MYNAME " remote"
+#define MYTYPE "lrpc.remote"
 #define TIMEOUT 10000
 
 static int
