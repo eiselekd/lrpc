@@ -1,0 +1,11 @@
+*~
+*.o
+*.so
+b/
+b5.1/
+b5.2/
+socket/
+.project
+.settings/
+luaevent.lua
+socket.lua
