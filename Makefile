@@ -47,6 +47,12 @@ here:
 	hererocks env5.2 -r 2.3.0 --lua 5.2
 	hererocks env5.3 -r 2.3.0 --lua 5.3 
 
+apt-libevent:
+	mkdir -p bevent; cd bevent;export DEB_BUILD_OPTIONS="debug nostrip noopt";fakeroot apt-get source -b libevent1-dev
+
+apt-libevent-i:
+	cd bevent; sudo dpkg -i *.deb
+
 apt-c5.2:
 	-rm -rf b5.2/*
 	mkdir -p b5.2; cd b5.2;export DEB_BUILD_OPTIONS="debug nostrip noopt";fakeroot apt-get source -b liblua5.2-dev
