@@ -16,12 +16,21 @@
 #include <arpa/inet.h>
 #include <netinet/tcp.h>
 #include <netdb.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <event.h>
 
 static const char *hex = "0123456789abcdef";
 #define MYNAME "lrpc"
 #define MYVERSION MYNAME " library for " LUA_VERSION
 #define MYTYPE "lrpc.remote"
 #define TIMEOUT 10000
+
+typedef struct {
+    lua_State* loop_L;
+    struct event_base* base;
+    int errorMessage;
+} le_base;
 
 static int
 strpack(lua_State *L)
@@ -109,6 +118,8 @@ conn(lua_State* L)
         addr.sin_addr.s_addr = ((struct in_addr *)(host_info->h_addr))->s_addr;
         addr.sin_port = htons(port);
 
+        printf("Start connect\n");
+
         int fd = socket(AF_INET, SOCK_STREAM, 0);
         if (fd == -1)
             return luaL_error(L, strerror(errno));
@@ -122,6 +133,7 @@ conn(lua_State* L)
             return luaL_error(L, strerror(errno));
         }
         lua_pushinteger(L, fd);
+        printf("Connected %d\n", fd);
         return 1;
     }
     int fd = open(f, O_RDWR);
@@ -301,7 +313,9 @@ static const luaL_Reg lrpclib[] = {
     {"strpack", strpack},
     {"rec_msg", rec_msg},
     {"send_msg", send_msg},
-    {"conn", conn},
+    {"clnt_conn", conn},
+    {"serv_create", serv_create},
+    {"serv_waitconn", serv_waitconn},
     {NULL, NULL}
 };
 

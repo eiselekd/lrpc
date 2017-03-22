@@ -1,32 +1,46 @@
-local luaevent = require("luaevent")
-local socket = require("socket")
+lrpc = require("lrpc");
 
-local function echoHandler(skt)
-  while true do
-    local data,ret = luaevent.receive(skt, 10)
-    if data == "quit" or ret == 'closed' then
-      break
-    end
-    luaevent.send(skt, data)
-    collectgarbage()
-  end
-  skt:close()
-  --print("DONE")
+server = lrpc.serv_create(8081);
+print("[+] "..server);
+fd = lrpc.serv_waitconn(server);
+
+mt = {};
+c = { sock=fd }
+setmetatable(c, {__index= mt});
+function mt.send(c)
+   lrpc.debug("[>] %p" % {c})
+   lrpc.send_msg(fd, c);
+   return r;
+end
+function mt.recv (...)
+   local r = lrpc.rec_msg(fd);
+   lrpc.debug("[<] %p" % {r})
+   return r;
 end
 
-local server = assert(socket.bind("localhost", 8081))
-server:settimeout(0)
-local coro = coroutine.create
-coroutine.create = function(...)
-	local ret = coro(...)
-	return ret
-end
+simple = SimpleClass:create()
+simple.c = function (...) return 1; end;
 
-luaevent.addserver(server, echoHandler)
-luaevent.loop()
+root = {
+   getnum = function (...)
+      return 2;
+   end,
+   gettab = function (...)
+      return {a=1,b=2 };
+   end,
+   getstr = function (...)
+      return "hello";
+   end,
+   getnil = function (...)
+      return nil;
+   end,
+   getobj = function (...)
+      return simple
+   end
+};
 
-
-
+tgt = lrpc.tgtlocal(root);
+lrpc.lrpc_server(tgt,c);
 
 --  Local Variables:
 --  c-basic-offset:4

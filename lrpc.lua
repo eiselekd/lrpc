@@ -161,6 +161,7 @@ function lrpc.ser(self,...)
          table.insert(r,"@");
          table.insert(r,m.getid(a));
       else
+         --print(".");
          local id
          local o = self.objs;
          if not self.objs[a] == nil then
@@ -257,7 +258,7 @@ function lrpc.connect(conn)
    m.ids[o] = "2"
    m.defer_cleanup = {};
 
-   function remote_send(self, l)
+   function rcall_send(self, l)
       local m = getmetatable(self)
       repeat
          conn.send(l)
@@ -270,12 +271,12 @@ function lrpc.connect(conn)
       return table.unpack(r,1,r.n)
    end
 
-   function remote(self, c, ...)
+   function rcall(self, c, ...)
       if #m.defer_cleanup > 0 then
-         remote_send(self, "~" .. table.concat(m.defer_cleanup, "#"))
+         rcall_send(self, "~" .. table.concat(m.defer_cleanup, "#"))
          meta.need_cleanup = {}
       end
-      return remote_send(self, c .. m.getid(self) .. lrpc.ser(self,...));
+      return rcall_send(self, c .. m.getid(self) .. lrpc.ser(self,...));
    end
 
    m.getid = function (self, k)
@@ -288,16 +289,16 @@ function lrpc.connect(conn)
       return o
    end
    m.__index = function (self, k)
-      return remote(self, "[", k)
+      return rcall(self, "[", k)
    end
    m.__newindex = function (self, k, v)
-      return remote(self, "=", k, v)
+      return rcall(self, "=", k, v)
    end
    m.__len  = function (self)
-      return remote(self, "#")
+      return rcall(self, "#")
    end
    m.__call = function (self,...)
-      return remote(self, "c", ...)
+      return rcall(self, "c", ...)
    end
    m.__gc = function (self,...)
       local id = m.ids[self]
@@ -306,13 +307,13 @@ function lrpc.connect(conn)
    end
    m.__pairs = function (self,...)
       local g = m.new(self, 0);
-      local p = remote(g, "[", "pairs");
-      return remote(p, "c", self);
+      local p = rcall(g, "[", "pairs");
+      return rcall(p, "c", self);
    end
    m.__ipairs = function (self,...)
       local g = m.new(self, 0);
-      local p = remote(g, "[", "ipairs");
-      return remote(p, "c", self);
+      local p = rcall(g, "[", "ipairs");
+      return rcall(p, "c", self);
    end
    return o
 end
@@ -334,7 +335,7 @@ function lrpc.lrpc_server_one(self,c)
    if d == "c" then
       r = table.pack(o(table.unpack(args, 1, args.n)))
    elseif d == "[" then
-      --print(args[1]);
+      print(args[1]);
       --print(o);
       r[1] = o[args[1]]
       r.n = 1
@@ -351,15 +352,16 @@ function lrpc.lrpc_server_one(self,c)
    return r
 end
 
-function lrpc.lrpc_server(self)
+function lrpc.lrpc_server(tgt,conn)
    local o, d, obj, al, e
    repeat
-      local s,c = pcall(recvcmd);
+      local s,c = pcall(conn.recv);
       if (s and c) then
          --lrpc.debug("[>] %p" % {c})
-         r = lrpc.lrpc_server_one(self,c);
-         r = ser(table.unpack(r, 1, r.n));
-         lrpc.send(r)
+         r = lrpc.lrpc_server_one(tgt,c);
+         lrpc.pprint(r);
+         r = lrpc.ser(tgt,table.unpack(r, 1, r.n));
+         conn.send(r)
       end
    until false;
 end

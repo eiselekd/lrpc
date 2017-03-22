@@ -1,13 +1,13 @@
 LUA_VERSION?=5.2
-LUA_CFLAGS=$(shell pkg-config lua$(LUA_VERSION) --cflags)
-LUA_LDFLAGS=$(shell pkg-config lua$(LUA_VERSION) --libs)
+LUA_CFLAGS=-g $(shell pkg-config lua$(LUA_VERSION) --cflags)
+LUA_LDFLAGS=-g $(shell pkg-config lua$(LUA_VERSION) --libs)
 
 lrpc/core.so: lrpc.c
-	mkdir -p lrpc 
-	gcc $(LUA_CFLAGS) -O2 -fpic -c -o lrpc.o lrpc.c 
-	gcc $(LUA_LDFLAGS) -O -shared -fpic -o lrpc/core.so lrpc.o
+	mkdir -p lrpc
+	gcc $(LUA_CFLAGS) -Og -fpic -c -o lrpc.o lrpc.c
+	gcc $(LUA_LDFLAGS)  -shared -fpic -o lrpc/core.so lrpc.o
 
-luaevent/core.so: 
+luaevent/core.so:
 	cd luaevent; $(CC) $(LUA_CFLAGS) -fpic -c -Iinclude  src/*.c
 	cd luaevent; $(CC) $(LUA_LDFLAGS) -O -shared -fpic  -o core.so *.o -levent
 	if [ ! -h luaevent.lua ]; then ln -s luaevent/lua/luaevent.lua; fi
@@ -45,7 +45,7 @@ apt:
 here:
 	hererocks env5.1 -r 2.3.0 --lua 5.1
 	hererocks env5.2 -r 2.3.0 --lua 5.2
-	hererocks env5.3 -r 2.3.0 --lua 5.3 
+	hererocks env5.3 -r 2.3.0 --lua 5.3
 
 apt-libevent:
 	mkdir -p bevent; cd bevent;export DEB_BUILD_OPTIONS="debug nostrip noopt";fakeroot apt-get source -b libevent1-dev
