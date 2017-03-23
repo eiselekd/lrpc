@@ -359,7 +359,7 @@ function lrpc.lrpc_server(tgt,conn)
       if (s and c) then
          --lrpc.debug("[>] %p" % {c})
          r = lrpc.lrpc_server_one(tgt,c);
-         lrpc.pprint(r);
+         --lrpc.pprint(r);
          r = lrpc.ser(tgt,table.unpack(r, 1, r.n));
          conn.send(r)
       end
