@@ -18,6 +18,14 @@ function mt.recv (...)
    return r;
 end
 
+SimpleClass = {}
+SimpleClass_mt = { __index = SimpleClass
+};
+function SimpleClass:create()
+   local new_inst = {}    -- the new instance
+   setmetatable( new_inst, SimpleClass_mt ) -- all instances share the same metatable
+   return new_inst
+end
 simple = SimpleClass:create()
 simple.c = function (...) return 1; end;
 
