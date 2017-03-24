@@ -261,8 +261,8 @@ function lrpc.connect(conn)
    function rcall_send(self, l)
       local m = getmetatable(self)
       repeat
-         conn.send(l)
-         s,c = pcall(conn.recv)
+         conn:send(l);
+         s,c = pcall(function (...) return conn:recv(); end);
          if not s then
             c = nil
          end
@@ -355,13 +355,13 @@ end
 function lrpc.lrpc_server(tgt,conn)
    local o, d, obj, al, e
    repeat
-      local s,c = pcall(conn.recv);
+      local s,c = pcall(conn:recv());
       if (s and c) then
          --lrpc.debug("[>] %p" % {c})
          r = lrpc.lrpc_server_one(tgt,c);
          --lrpc.pprint(r);
          r = lrpc.ser(tgt,table.unpack(r, 1, r.n));
-         conn.send(r)
+         conn:send(r)
       end
    until false;
 end
@@ -385,15 +385,14 @@ function lrpc.tgtproxy(conn,testmode)
       -- in testmode conn is the target object and is called directly by overriding send and recv
       local ret = "";
       local m = getmetatable(conn);
-      function m.send(c)
-         lrpc.debug("[>] %p" % {c})
+      function m.send(self,c)
+         lrpc.debug("[<] %p" % {c})
          local r = conn.lrpc_server_one(conn,c)
-         --lrpc.pprint(r);
          ret = lrpc.ser(conn,table.unpack(r, 1, r.n))
          return r;
       end
-      function m.recv (...)
-         lrpc.debug("[<] %p" % {ret})
+      function m.recv (self,...)
+         lrpc.debug("[>] %p" % {ret})
          return ret;
       end
    end
