@@ -7,14 +7,14 @@ fd = lrpc.serv_waitconn(server);
 mt = {};
 c = { sock=fd }
 setmetatable(c, {__index= mt});
-function mt.send(c)
-   lrpc.debug("[>] %p" % {c})
+function mt.send(self,c)
+   lrpc.debug("[<s] %p" % {c})
    lrpc.send_msg(fd, c);
    return r;
 end
-function mt.recv (...)
+function mt.recv (self,...)
    local r = lrpc.rec_msg(fd);
-   lrpc.debug("[<] %p" % {r})
+   lrpc.debug("[>s] %p" % {r})
    return r;
 end
 

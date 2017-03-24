@@ -4,14 +4,14 @@ fd  = lrpc.clnt_conn("localhost:8081");
 print("[+] connect " .. fd);
 
 mt = {};
-mt.send = function (c)
+mt.send = function (self,c)
    lrpc.send_msg(fd, c);
-   lrpc.debug("[>] %p" % {c})
+   lrpc.debug("[<c] %p" % {c})
    return r;
 end
-mt.recv = function (...)
+mt.recv = function (self,...)
    local r = lrpc.rec_msg(fd);
-   lrpc.debug("[<] %p" % {r})
+   lrpc.debug("[>c] %p" % {r})
    return r;
 end
 c = {sock=fd};
