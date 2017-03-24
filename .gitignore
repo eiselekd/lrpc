@@ -9,3 +9,7 @@ socket/
 .settings/
 luaevent.lua
 socket.lua
+GPATH
+GRTAGS
+GTAGS
+bevent/
