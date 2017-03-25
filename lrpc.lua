@@ -261,6 +261,7 @@ function lrpc.connect(conn)
    function rcall_send(self, l)
       local m = getmetatable(self)
       repeat
+         -- executed locally, send cmd to target and read reply 
          conn:send(l);
          s,c = pcall(function (...) return conn:recv(); end);
          if not s then
@@ -355,6 +356,7 @@ end
 function lrpc.lrpc_server(tgt,conn)
    local o, d, obj, al, e
    repeat
+      -- executed remotely, read command and send reply 
       local s,c = pcall(function (...) return conn:recv(); end);
       if (s and c) then
          --lrpc.debug("[>] %p" % {c})
