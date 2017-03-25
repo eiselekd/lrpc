@@ -355,7 +355,7 @@ end
 function lrpc.lrpc_server(tgt,conn)
    local o, d, obj, al, e
    repeat
-      local s,c = pcall(conn:recv());
+      local s,c = pcall(function (...) return conn:recv(); end);
       if (s and c) then
          --lrpc.debug("[>] %p" % {c})
          r = lrpc.lrpc_server_one(tgt,c);
