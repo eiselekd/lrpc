@@ -18,7 +18,7 @@
 #include <netdb.h>
 #include <sys/types.h>
 #include <sys/time.h>
-#include <event.h>
+//#include <event.h>
 
 static const char *hex = "0123456789abcdef";
 #define MYNAME "lrpc"
@@ -28,7 +28,7 @@ static const char *hex = "0123456789abcdef";
 
 typedef struct {
     lua_State* loop_L;
-    struct event_base* base;
+    //struct event_base* base;
     int errorMessage;
 } le_base;
 
