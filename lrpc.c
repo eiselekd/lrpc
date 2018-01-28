@@ -1,3 +1,5 @@
+/* BSD-license */
+
 #include "lua.h"
 #include "lauxlib.h"
 #include <stdlib.h>

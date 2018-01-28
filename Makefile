@@ -32,7 +32,7 @@ luarocks:
 	luarocks --local make rockspecs/lrpc/lrpc-0.0.1-1.rockspec
 
 test:
-	lua5.2 t/test.lua
+	lua$(LUA_VERSION) t/test.lua
 
 
 
